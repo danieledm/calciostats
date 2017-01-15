@@ -13,20 +13,36 @@ object BlogSpec  extends App with WebBrowser {
   System.setProperty("webdriver.chrome.driver", "/Users/daniele/dev/chromedriver")
   implicit val webDriver: WebDriver = new ChromeDriver()
 
-  go to "https://www.whoscored.com/Teams/75/Statistics/Italy-Inter"
+  go to "https://www.whoscored.com/Regions/108/Tournaments/5/Italy-Serie-A"
 
-  val title = pageTitle
+  val teams = findAll(className("team-link"))
+    .map(x=>x.attribute("href"))
+    .filter(x=>x.isDefined)
+    .map(x=>x.get)
+    .toList.distinct
 
 
-//  getSituationStatistics("team-goals-content").foreach(println)
-//  getSituationStatistics("team-passes-content").foreach(println)
-//  getSituationStatistics("team-cards-content").foreach(println)
-//  collectGeneralStatistics().foreach(println)
+  val results = teams.map(team => {
+    go to s"${team}/Statistics"
 
-  go to "https://www.whoscored.com/stagestatfeed/?against=0&field=0&stageId=14014&teamId=75&type=6"
+    println(s"${team}/Statistics") //log
 
-  val body = pageSource
-  println(body)
+    val title = pageTitle
+
+    val goalContent = getSituationStatistics("team-goals-content")
+    val passesContent = getSituationStatistics("team-passes-content")
+    val cardsContent = getSituationStatistics("team-cards-content")
+    val general = collectGeneralStatistics()
+
+    ("name", title.split("-")(0).trim) :: goalContent ::: passesContent ::: cardsContent ::: general
+  })
+
+  val titles = results.head.map(_._1)
+  println(titles.mkString(","))
+  val listResultMap = results.map(x => x.toMap)
+
+  listResultMap.map(resultMap => titles.map(title => resultMap(title)).mkString(",")).foreach(println)
+
 
   close()
 
