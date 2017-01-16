@@ -1,5 +1,7 @@
 package com.calciostats.scraper
 
+import java.io._
+
 import org.openqa.selenium.{WebDriver, WebElement}
 import org.openqa.selenium.chrome.ChromeDriver
 import org.scalatest.selenium.WebBrowser
@@ -8,20 +10,25 @@ import org.scalatest.selenium.WebBrowser
 /**
   * Created by daniele on 12/01/2017.
   */
-object BlogSpec  extends App with WebBrowser {
+object SeleniumScraper extends App with TeamStatistics {
 
-  System.setProperty("webdriver.chrome.driver", "/Users/daniele/dev/chromedriver")
-  implicit val webDriver: WebDriver = new ChromeDriver()
+  // italy, england, spain, germany, france, portugal, netherlands
+//  val allLeagues = (108, 5) :: (252, 2) :: (206, 4) :: (81, 3) :: (74, 22) :: (177, 21) :: (155, 13) :: Nil
+  val allLeagues = (108, 5) :: Nil
 
-  go to "https://www.whoscored.com/Regions/108/Tournaments/5/Italy-Serie-A"
+  // get teams url ids
+  val teams = allLeagues.flatMap(league => {
+    go to s"https://www.whoscored.com/Regions/${league._1}/Tournaments/${league._2}"
 
-  val teams = findAll(className("team-link"))
-    .map(x=>x.attribute("href"))
-    .filter(x=>x.isDefined)
-    .map(x=>x.get)
-    .toList.distinct
+    findAll(className("team-link"))
+      .map(x => x.attribute("href"))
+      .filter(x => x.isDefined)
+      .map(x => x.get)
+      .toList.distinct
+  })
 
 
+  // for every team collect statistics in a map
   val results = teams.map(team => {
     go to s"${team}/Statistics"
 
@@ -34,20 +41,33 @@ object BlogSpec  extends App with WebBrowser {
     val cardsContent = getSituationStatistics("team-cards-content")
     val general = collectGeneralStatistics()
 
-    ("name", title.split("-")(0).trim) :: goalContent ::: passesContent ::: cardsContent ::: general
+    val teamName = title.split("-")(0).trim
+    ("Team", teamName) :: goalContent ::: passesContent ::: cardsContent ::: general
   })
 
   val titles = results.head.map(_._1)
-  println(titles.mkString(","))
+  val titleRow = titles.mkString(",")
+
   val listResultMap = results.map(x => x.toMap)
+  val lines = listResultMap.map(resultMap => titles.map(title => resultMap.getOrElse(title, "n/a")).mkString(","))
 
-  listResultMap.map(resultMap => titles.map(title => resultMap(title)).mkString(",")).foreach(println)
-
+  val writer = new PrintWriter(new File("team-statistics.csv" ))
+  writer.append(titleRow)
+  lines.foreach(line => writer.append(line))
+  writer.close()
 
   close()
 
+}
+
+trait TeamStatistics extends WebBrowser {
+
+  System.setProperty("webdriver.chrome.driver", "/Users/daniele/dev/chromedriver")
+
+  implicit val webDriver: WebDriver = new ChromeDriver()
+
   def getSituationStatistics(elementId: String ): List[(String, String)] = {
-    val table: List[_root_.com.calciostats.scraper.BlogSpec.Element] = findAll(id(elementId)).toList
+    val table: List[Element] = findAll(id(elementId)).toList
 
     val situationsStats = Utils.findChildElementByName(table.head.underlying, "tr")
       .map(Utils.findChildElementByName(_, "td").toList)
@@ -69,8 +89,7 @@ object BlogSpec  extends App with WebBrowser {
       }
     }
 
-    val eles: Iterator[_root_.com.calciostats.scraper.BlogSpec.Element] = findAll(className("ws-list"))
-
+    val eles: Iterator[Element] = findAll(className("ws-list"))
     val statsList = eles.flatMap(el => Utils.findChildElementByName(el.underlying, "td").map(toText)).toList
 
     val values = statsList.zipWithIndex.filter(e => (e._2 + 1) % 2 == 0).map(_._1)
@@ -78,8 +97,6 @@ object BlogSpec  extends App with WebBrowser {
 
     keys.zip(values)
   }
-
-
 }
 
 
@@ -89,13 +106,4 @@ object Utils {
     element.findElements(org.openqa.selenium.By.tagName(name)).toList
   }
 
-  def findChildElementByXPath(element: WebElement, xpath: String): List[WebElement] = {
-    import scala.collection.JavaConversions._
-    element.findElements(org.openqa.selenium.By.xpath(xpath)).toList
-  }
-
-  def findChildElementById(element: WebElement, id: String): List[WebElement] = {
-    import scala.collection.JavaConversions._
-    element.findElements(org.openqa.selenium.By.id(id)).toList
-  }
 }
