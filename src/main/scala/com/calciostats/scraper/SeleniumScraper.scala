@@ -29,7 +29,7 @@ object SeleniumScraper extends App with TeamStatistics {
 
 
   // for every team collect statistics in a map
-  val results = teams.map(team => {
+  val results = teams.head.map(team => { //TODO removve head
     go to s"${team}/Statistics"
 
     println(s"${team}/Statistics") //log
@@ -58,6 +58,7 @@ object SeleniumScraper extends App with TeamStatistics {
 
   close()
 
+  println("END!")
 }
 
 trait TeamStatistics extends WebBrowser {
