@@ -1,6 +1,6 @@
 package com.calciostats.scraper
 
-import java.io._
+import java.nio.file.{Files, Paths}
 
 import org.openqa.selenium.{WebDriver, WebElement}
 import org.openqa.selenium.chrome.ChromeDriver
@@ -13,8 +13,8 @@ import org.scalatest.selenium.WebBrowser
 object SeleniumScraper extends App with TeamStatistics {
 
   // italy, england, spain, germany, france, portugal, netherlands
-//  val allLeagues = (108, 5) :: (252, 2) :: (206, 4) :: (81, 3) :: (74, 22) :: (177, 21) :: (155, 13) :: Nil
-  val allLeagues = (108, 5) :: Nil
+  val allLeagues = (108, 5) :: (252, 2) :: (206, 4) :: (81, 3) :: (74, 22) :: (177, 21) :: (155, 13) :: Nil
+//  val allLeagues = (108, 5) :: Nil
 
   // get teams url ids
   val teams = allLeagues.flatMap(league => {
@@ -29,13 +29,11 @@ object SeleniumScraper extends App with TeamStatistics {
 
 
   // for every team collect statistics in a map
-  val results = teams.head.map(team => { //TODO removve head
+  val results = teams.map(team => {
     go to s"${team}/Statistics"
-
     println(s"${team}/Statistics") //log
 
     val title = pageTitle
-
     val goalContent = getSituationStatistics("team-goals-content")
     val passesContent = getSituationStatistics("team-passes-content")
     val cardsContent = getSituationStatistics("team-cards-content")
@@ -50,11 +48,10 @@ object SeleniumScraper extends App with TeamStatistics {
 
   val listResultMap = results.map(x => x.toMap)
   val lines = listResultMap.map(resultMap => titles.map(title => resultMap.getOrElse(title, "n/a")).mkString(","))
+  val linesWithTitle = titleRow :: lines
 
-  val writer = new PrintWriter(new File("team-statistics.csv" ))
-  writer.append(titleRow)
-  lines.foreach(line => writer.append(line))
-  writer.close()
+  import scala.collection.JavaConverters._
+  Files.write(Paths.get("team-statistics.csv"), linesWithTitle.asJava)
 
   close()
 
@@ -63,7 +60,7 @@ object SeleniumScraper extends App with TeamStatistics {
 
 trait TeamStatistics extends WebBrowser {
 
-  System.setProperty("webdriver.chrome.driver", "/Users/daniele/dev/chromedriver")
+  System.setProperty("webdriver.chrome.driver", "./chromedriver")
 
   implicit val webDriver: WebDriver = new ChromeDriver()
 
