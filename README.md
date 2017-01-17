@@ -1,1 +1,5 @@
 # calciostats
+
+```
+    sbt run
+```
