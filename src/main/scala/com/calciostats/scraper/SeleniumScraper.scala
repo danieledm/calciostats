@@ -98,7 +98,7 @@ trait TeamStatistics extends WebBrowser {
 }
 
 
-object Utils {
+object Utility {
   def findChildElementByName(element: WebElement, name: String): List[WebElement] = {
     import scala.collection.JavaConversions._
     element.findElements(org.openqa.selenium.By.tagName(name)).toList
