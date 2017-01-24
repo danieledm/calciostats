@@ -1,6 +1,8 @@
 package com.calciostats.scraper
 
-import com.calciostats.scraper.Utils.{findChildElementByName, toText}
+import java.nio.file.{Files, Paths}
+
+import com.calciostats.scraper.Utils.{findChildElementByName, mergeTables, toText, writeResultOnCsvFile}
 import org.openqa.selenium.{WebDriver, WebElement}
 import org.openqa.selenium.chrome.ChromeDriver
 import org.scalatest.selenium.WebBrowser
@@ -19,37 +21,47 @@ object ScraperByLeague extends App with WebBrowser {
 
   val summary = getStatAttributes
 
-  click on xpath("""//*[@id="stage-team-stats-options"]/li[2]/a""")
-  val defensive = getStatAttributes
-
-  click on xpath("""//*[@id="stage-team-stats-options"]/li[3]/a""")
-  val offensive = getStatAttributes
+//  click on xpath("""//*[@id="stage-team-stats-options"]/li[2]/a""")
+//  Thread.sleep(500)
+//  val defensive = getStatAttributes
+//
+//  click on xpath("""//*[@id="stage-team-stats-options"]/li[3]/a""")
+//  Thread.sleep(500)
+//  val offensive = getStatAttributes
 
 
   val goalTypes = getStatGoalAttributes
 
-  click on """//*[@id="stage-situation-stats-options"]/li[2]/a"""
-  val passTypes = getStatGoalAttributes
-
-  click on """//*[@id="stage-situation-stats-options"]/li[3]/a"""
-  val cardSituations = getStatGoalAttributes
+//  click on xpath("""//*[@id="stage-situation-stats-options"]/li[2]/a""")
+//  Thread.sleep(500)
+//  val passTypes = getStatGoalAttributes
+//
+//  click on xpath("""//*[@id="stage-situation-stats-options"]/li[3]/a""")
+//  Thread.sleep(500)
+//  val cardSituations = getStatGoalAttributes
 
 
   val attackSides = getPositionalStatAttributes
 
-  click on """//*[@id="stage-pitch-stats-options"]/li[2]/a"""
-  val shotDirections = getPositionalStatAttributes
+//  click on xpath("""//*[@id="stage-pitch-stats-options"]/li[2]/a""")
+//  Thread.sleep(500)
+//  val shotDirections = getPositionalStatAttributes
+//
+//  click on xpath("""//*[@id="stage-pitch-stats-options"]/li[3]/a""")
+//  Thread.sleep(500)
+//  val shotZones = getPositionalStatAttributes
+//
+//  click on xpath("""//*[@id="stage-pitch-stats-options"]/li[4]/a""")
+//  Thread.sleep(500)
+//  val actionZones = getPositionalStatAttributes
 
-  click on """//*[@id="stage-pitch-stats-options"]/li[3]/a"""
-  val shotZones = getPositionalStatAttributes
+  val results = List(summary, goalTypes, attackSides).reduceLeft { mergeTables }
 
-  click on """//*[@id="stage-pitch-stats-options"]/li[4]/a"""
-  val actionZones = getPositionalStatAttributes
+  writeResultOnCsvFile(results)
 
   print("END")
 
   close()
-
 
 
 
@@ -104,4 +116,24 @@ object Utils {
     element.findElements(org.openqa.selenium.By.xpath(name)).toList
   }
 
+  def mergeMap[K,V](map1: Map[K,V], map2: Map[K,V]): Map[K,V] = {
+    (map1.toList ::: map2.toList).toMap
+  }
+  def mergeTables(tableRows1: List[Map[String, String]], tableRows2: List[Map[String, String]]): List[Map[String, String]] = {
+    val byTeam1 = tableRows1.groupBy(_("Team"))
+    val byTeam2 = tableRows2.groupBy(_("Team"))
+    byTeam1.map { case (k,v) => mergeMap(v.head,  byTeam2.get(k).get.head) }.toList
+  }
+
+  def writeResultOnCsvFile(results: List[Map[String, String]]): Unit = {
+    println("saving results ...")
+    val titles = results.head.keys
+    val titleRow = titles.mkString(",")
+    val lines = results.map(resultMap => titles.toSeq.map(title => resultMap.getOrElse(title, "n/a")).mkString(","))
+
+    val linesWithTitle = titleRow :: lines
+
+    import scala.collection.JavaConverters._
+    Files.write(Paths.get("team-statistics.csv"), linesWithTitle.asJava)
+  }
 }
