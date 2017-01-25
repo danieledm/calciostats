@@ -17,7 +17,7 @@ libraryDependencies += "org.scalatest" % "scalatest_2.11" % "3.0.1"
 
 libraryDependencies += "org.seleniumhq.selenium" % "selenium-chrome-driver" % "2.39.0"
 
-mainClass in (Compile, run) := Some("com.calciostats.scraper.SeleniumScraper")
+mainClass in (Compile, run) := Some("com.calciostats.scraper.ScraperByLeague")
 
 packageName in Docker := "whoscoredstats"
 

@@ -3,8 +3,9 @@ package com.calciostats.scraper
 import java.nio.file.{Files, Paths}
 
 import com.calciostats.scraper.Utils.{findChildElementByName, mergeTables, toText, writeResultOnCsvFile}
-import org.openqa.selenium.{WebDriver, WebElement}
+import org.openqa.selenium.{By, WebDriver, WebElement}
 import org.openqa.selenium.chrome.ChromeDriver
+import org.openqa.selenium.support.ui.{ExpectedConditions, WebDriverWait}
 import org.scalatest.selenium.WebBrowser
 import org.scalatest.time.{Second, Span}
 
@@ -19,43 +20,56 @@ object ScraperByLeague extends App with WebBrowser {
 
   go to "https://www.whoscored.com/Regions/108/Tournaments/5/Seasons/6461/Stages/14014/TeamStatistics/Italy-Serie-A-2016-2017"
 
+
+//  val title: String =  find(xpath("""//*[@id="layout-content-wrapper"]/div[1]/h1""")).map{_.text}.orNull
+//  val year: String =  url.
+
+
   val summary = getStatAttributes
 
-//  click on xpath("""//*[@id="stage-team-stats-options"]/li[2]/a""")
-//  Thread.sleep(500)
-//  val defensive = getStatAttributes
-//
-//  click on xpath("""//*[@id="stage-team-stats-options"]/li[3]/a""")
-//  Thread.sleep(500)
-//  val offensive = getStatAttributes
+  click on xpath("""//*[@id="stage-team-stats-options"]/li[2]/a""")
+  new WebDriverWait(webDriver, 30)
+    .until(ExpectedConditions.presenceOfElementLocated(By.xpath("""//*[@id="statistics-team-table-defensive"]/table""")))
+  val defensive = getStatAttributes
+
+  click on xpath("""//*[@id="stage-team-stats-options"]/li[3]/a""")
+  new WebDriverWait(webDriver, 30)
+    .until(ExpectedConditions.presenceOfElementLocated(By.xpath("""//*[@id="statistics-team-table-offensive"]/table""")))
+  val offensive = getStatAttributes
 
 
   val goalTypes = getStatGoalAttributes
 
-//  click on xpath("""//*[@id="stage-situation-stats-options"]/li[2]/a""")
-//  Thread.sleep(500)
-//  val passTypes = getStatGoalAttributes
-//
-//  click on xpath("""//*[@id="stage-situation-stats-options"]/li[3]/a""")
-//  Thread.sleep(500)
-//  val cardSituations = getStatGoalAttributes
+  click on xpath("""//*[@id="stage-situation-stats-options"]/li[2]/a""")
+  new WebDriverWait(webDriver, 30)
+    .until(ExpectedConditions.presenceOfElementLocated(By.xpath("""//*[@id="stage-passes-content"]/tr[1]""")))
+  val passTypes = getStatGoalAttributes
+
+  click on xpath("""//*[@id="stage-situation-stats-options"]/li[3]/a""")
+  new WebDriverWait(webDriver, 30)
+    .until(ExpectedConditions.presenceOfElementLocated(By.xpath("""//*[@id="stage-cards-content"]/tr[1]""")))
+  val cardSituations = getStatGoalAttributes
 
 
   val attackSides = getPositionalStatAttributes
 
-//  click on xpath("""//*[@id="stage-pitch-stats-options"]/li[2]/a""")
-//  Thread.sleep(500)
-//  val shotDirections = getPositionalStatAttributes
-//
-//  click on xpath("""//*[@id="stage-pitch-stats-options"]/li[3]/a""")
-//  Thread.sleep(500)
-//  val shotZones = getPositionalStatAttributes
-//
-//  click on xpath("""//*[@id="stage-pitch-stats-options"]/li[4]/a""")
-//  Thread.sleep(500)
-//  val actionZones = getPositionalStatAttributes
+  click on xpath("""//*[@id="stage-pitch-stats-options"]/li[2]/a""")
+  new WebDriverWait(webDriver, 30)
+    .until(ExpectedConditions.presenceOfElementLocated(By.xpath("""//*[@id="stage-attempt-directions-content"]/tr[1]""")))
+  val shotDirections = getPositionalStatAttributes
 
-  val results = List(summary, goalTypes, attackSides).reduceLeft { mergeTables }
+  click on xpath("""//*[@id="stage-pitch-stats-options"]/li[3]/a""")
+  new WebDriverWait(webDriver, 30)
+    .until(ExpectedConditions.presenceOfElementLocated(By.xpath("""//*[@id="stage-attempt-zones-content"]/tr[1]""")))
+  val shotZones = getPositionalStatAttributes
+
+  click on xpath("""//*[@id="stage-pitch-stats-options"]/li[4]/a""")
+
+  new WebDriverWait(webDriver, 30)
+    .until(ExpectedConditions.presenceOfElementLocated(By.xpath("""//*[@id="stage-touch-zones-content"]/tr[1]""")))
+  val actionZones = getPositionalStatAttributes
+
+    val results = List(summary, defensive, offensive, goalTypes, passTypes, cardSituations, attackSides, shotDirections, shotZones, actionZones).reduceLeft { mergeTables }
 
   writeResultOnCsvFile(results)
 
@@ -120,9 +134,9 @@ object Utils {
     (map1.toList ::: map2.toList).toMap
   }
   def mergeTables(tableRows1: List[Map[String, String]], tableRows2: List[Map[String, String]]): List[Map[String, String]] = {
-    val byTeam1 = tableRows1.groupBy(_("Team"))
-    val byTeam2 = tableRows2.groupBy(_("Team"))
-    byTeam1.map { case (k,v) => mergeMap(v.head,  byTeam2.get(k).get.head) }.toList
+    val byTeam1 = tableRows1.filter(_.get("Team").isDefined).groupBy(_("Team"))
+    val byTeam2 = tableRows2.filter(_.get("Team").isDefined).groupBy(_("Team"))
+    byTeam1.map { case (k,v) => mergeMap(v.head,  byTeam2.getOrElse(k, List(Map[String, String]())).head) }.toList
   }
 
   def writeResultOnCsvFile(results: List[Map[String, String]]): Unit = {
